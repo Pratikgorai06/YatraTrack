@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Yatra Track</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+      crossorigin="anonymous"
+    />
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+      }
+      #map {
+        height: calc(100vh - 40px);
+        width: 100%;
+      }
+      #loading {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 20px;
+        border-radius: 5px;
+        z-index: 1000;
+      }
+      #busInfo {
+        position: fixed;
+        top: 10%;
+        right: 10px;
+        background: white;
+        border: 2px solid #333;
+        border-radius: 8px;
+        padding: 15px;
+        max-width: 300px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        display: none;
+        font-size: 14px;
+      }
+      #busInfo .profile-pic {
+        width: 50px;
+        height: 50px;
+        background: #ddd;
+        border-radius: 50%;
+        margin: 0 auto 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #666;
+        font-size: 12px;
+      }
+      #busInfo h3 {
+        margin: 0 0 10px 0;
+        color: #333;
+        text-align: center;
+      }
+      #busInfo .info-item {
+        margin: 5px 0;
+        padding: 3px 0;
+        border-bottom: 1px solid #eee;
+      }
+      #busInfo .close-btn {
+        position: absolute;
+        top: 5px;
+        right: 10px;
+        background: none;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        color: #666;
+      }
+      footer {
+        position: sticky;
+        bottom: 0;
+        width: 100%;
+        background-color: #f8f9fa;
+        text-align: center;
+        padding: 10px 0;
+        border-top: 1px solid #dee2e6;
+      }
+    </style>
+  </head>
+  <header>
+    <nav
+      class="navbar fixed-top navbar-expand-lg navbar-light bg-light shadow-sm"
+    >
+      <div class="container-fluid">
+        <a class="navbar-brand" href="/">YatraTrack</a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNavAltMarkup"
+          aria-controls="navbarNavAltMarkup"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+          <div class="navbar-nav ms-auto">
+            <a class="nav-link active" href="/">Home</a>
+            <a class="nav-link" href="/simulated">Simulation</a>
+            <a class="nav-link" href="/auth">SignUp/Login</a>
+          </div>
+        </div>
+      </div>
+    </nav>
+  </header>
+  <body>
+    <div id="loading" style="display: none">Loading road network...</div>
+    <div id="busInfo">
+      <button class="close-btn" onclick="closeBusInfo()">&times;</button>
+      <div class="profile-pic">Photo</div>
+      <h3 id="busTitle">Bus Information</h3>
+      <div class="info-item">
+        <strong>Driver:</strong> <span id="driverName"></span>
+      </div>
+      <div class="info-item">
+        <strong>Owner:</strong> <span id="ownerName"></span>
+      </div>
+      <div class="info-item">
+        <strong>Vacant Seats:</strong> <span id="vacantSeats"></span>
+      </div>
+      <div class="info-item">
+        <strong>Current Speed:</strong> <span id="busSpeed"></span> km/h
+      </div>
+      <div class="info-item">
+        <strong>Heading to:</strong> <span id="destination"></span>
+      </div>
+      <div class="info-item">
+        <strong>Route:</strong> <span id="routeInfo"></span>
+      </div>
+    </div>
+
+    <div id="map"></div>
+    <footer>&copy; 2025 YatraTrack. All rights reserved.</footer>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+      let map;
+      let userLat = 28.6139,
+        userLng = 77.209; // Default to Delhi
+      let roadNetwork = { nodes: new Map(), edges: new Map() };
+      let roadNodesArray = [];
+      let trafficVehicles = [];
+      let indianNames = [
+        "Rajesh Kumar",
+        "Priya Sharma",
+        "Amit Singh",
+        "Sunita Devi",
+        "Vikash Yadav",
+        "Pooja Gupta",
+        "Rahul Verma",
+        "Anjali Tiwari",
+        "Suresh Pandey",
+        "Kavita Mishra",
+        "Manoj Jha",
+        "Seema Roy",
+        "Dinesh Kumar",
+        "Ritu Singh",
+        "Anil Prasad",
+        "Geeta Kumari",
+        "Santosh Rai",
+        "Babita Devi",
+        "Ramesh Sinha",
+        "Sushma Gupta",
+      ];
+      let indianPlaces = [
+        "Delhi",
+        "Mumbai",
+        "Kolkata",
+        "Chennai",
+        "Bangalore",
+        "Hyderabad",
+        "Ahmedabad",
+        "Pune",
+        "Surat",
+        "Jaipur",
+        "Lucknow",
+        "Kanpur",
+        "Nagpur",
+        "Indore",
+        "Thane",
+        "Bhopal",
+        "Visakhapatnam",
+        "Pimpri",
+        "Patna",
+        "Vadodara",
+        "Ghaziabad",
+        "Ludhiana",
+        "Agra",
+        "Nashik",
+        "Faridabad",
+        "Meerut",
+        "Rajkot",
+        "Kalyan",
+        "Vasai",
+        "Varanasi",
+      ];
+      let isNetworkLoaded = false;
+
+      const redIcon = L.divIcon({
+        className: "custom-red-marker",
+        html: '<div style="background-color: red; width: 16px; height: 16px; border-radius: 50%; border: 3px solid darkred; cursor: pointer;"></div>',
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+      });
+
+      const destinationIcon = L.divIcon({
+        className: "custom-destination-marker",
+        html: '<div style="background-color: green; width: 8px; height: 8px; border-radius: 50%; border: 2px solid darkgreen;"></div>',
+        iconSize: [12, 12],
+        iconAnchor: [6, 6],
+      });
+
+      async function DisplayUserMap() {
+        map = L.map("map").setView([userLat, userLng], 12);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "&copy; OpenStreetMap contributors",
+        }).addTo(map);
+
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              userLat = position.coords.latitude;
+              userLng = position.coords.longitude;
+              map.setView([userLat, userLng], 13);
+              L.marker([userLat, userLng])
+                .addTo(map)
+                .bindPopup("You are here")
+                .openPopup();
+              await initializeTraffic();
+            },
+            async () => {
+              console.log("Location denied, using fallback");
+              await initializeTraffic();
+            }
+          );
+        } else {
+          await initializeTraffic();
+        }
+      }
+
+      async function initializeTraffic() {
+        try {
+          await loadRoadNetwork();
+          if (isNetworkLoaded && roadNodesArray.length > 10) {
+            console.log(
+              "Starting traffic with",
+              roadNodesArray.length,
+              "road nodes"
+            );
+            Traffic(userLat, userLng);
+          } else {
+            console.log(
+              "Road network insufficient, creating simple traffic..."
+            );
+            createSimpleTraffic();
+          }
+        } catch (error) {
+          console.error("Error initializing traffic:", error);
+          createSimpleTraffic();
+        }
+      }
+
+      function createSimpleTraffic() {
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * 2 * Math.PI;
+          const distance = (Math.random() * 5 + 2) * 0.01;
+          const lat = userLat + Math.cos(angle) * distance;
+          const lng = userLng + Math.sin(angle) * distance;
+
+          const destAngle = Math.random() * 2 * Math.PI;
+          const destDistance = (Math.random() * 3 + 2) * 0.01;
+          const destLat = lat + Math.cos(destAngle) * destDistance;
+          const destLng = lng + Math.sin(destAngle) * destDistance;
+
+          const marker = L.marker([lat, lng], { icon: redIcon }).addTo(map);
+          const destMarker = L.marker([destLat, destLng], {
+            icon: destinationIcon,
+          }).addTo(map);
+          destMarker.setOpacity(0);
+
+          const velocity = Math.floor(Math.random() * 61) + 20;
+          const vehicle = {
+            marker,
+            destMarker,
+            lat,
+            lng,
+            destLat,
+            destLng,
+            startLat: lat,
+            startLng: lng,
+            velocity,
+            lastUpdate: Date.now(),
+            pathLine: null,
+            showingPath: false,
+            completed: false,
+            simple: true,
+            goingToDestination: true,
+            busInfo: generateBusInfo(),
+          };
+
+          marker.on("click", () => {
+            showBusInfo(vehicle);
+            toggleSimplePath(vehicle);
+          });
+          trafficVehicles.push(vehicle);
+        }
+        updateSimpleTraffic();
+      }
+
+      function toggleSimplePath(vehicle) {
+        if (vehicle.showingPath) {
+          if (vehicle.pathLine) {
+            map.removeLayer(vehicle.pathLine);
+            vehicle.pathLine = null;
+          }
+          vehicle.destMarker.setOpacity(0);
+          vehicle.showingPath = false;
+        } else {
+          const targetLat = vehicle.goingToDestination
+            ? vehicle.destLat
+            : vehicle.startLat;
+          const targetLng = vehicle.goingToDestination
+            ? vehicle.destLng
+            : vehicle.startLng;
+
+          vehicle.pathLine = L.polyline(
+            [
+              [vehicle.lat, vehicle.lng],
+              [targetLat, targetLng],
+            ],
+            { color: "blue", weight: 3, opacity: 0.7 }
+          ).addTo(map);
+          vehicle.destMarker.setOpacity(1);
+          vehicle.showingPath = true;
+        }
+      }
+
+      function updateSimpleTraffic() {
+        trafficVehicles.forEach((vehicle) => {
+          if (vehicle.simple && !vehicle.completed) {
+            const now = Date.now();
+            const dt = (now - vehicle.lastUpdate) / 1000;
+
+            let targetLat, targetLng;
+            if (vehicle.goingToDestination) {
+              targetLat = vehicle.destLat;
+              targetLng = vehicle.destLng;
+            } else {
+              targetLat = vehicle.startLat;
+              targetLng = vehicle.startLng;
+            }
+
+            const distToTarget = calculateDistance(
+              vehicle.lat,
+              vehicle.lng,
+              targetLat,
+              targetLng
+            );
+
+            if (distToTarget < 50) {
+              vehicle.goingToDestination = !vehicle.goingToDestination;
+              vehicle.busInfo.vacantSeats = Math.floor(Math.random() * 100) + 1;
+            } else {
+              const bearing = calculateBearing(
+                vehicle.lat,
+                vehicle.lng,
+                targetLat,
+                targetLng
+              );
+              const velocityMs = vehicle.velocity / 3.6;
+              const dist = velocityMs * dt;
+              const deg = dist / 111320;
+
+              vehicle.lat += Math.cos(bearing) * deg;
+              vehicle.lng += Math.sin(bearing) * deg;
+              vehicle.marker.setLatLng([vehicle.lat, vehicle.lng]);
+
+              if (vehicle.showingPath && vehicle.pathLine) {
+                vehicle.pathLine.setLatLngs([
+                  [vehicle.lat, vehicle.lng],
+                  [targetLat, targetLng],
+                ]);
+              }
+            }
+
+            vehicle.lastUpdate = now;
+          }
+        });
+
+        setTimeout(updateSimpleTraffic, 1000);
+      }
+
+      async function loadRoadNetwork() {
+        const loading = document.getElementById("loading");
+        loading.style.display = "block";
+        console.log("Loading road network for", userLat, userLng);
+
+        const bbox = getBoundingBox(userLat, userLng, 8);
+        const query = `[out:json][timeout:25];(way[highway~"^(primary|secondary|tertiary|residential|trunk|motorway|unclassified)$"](${bbox.south},${bbox.west},${bbox.north},${bbox.east}););(._;>;);out;`;
+
+        try {
+          console.log("Fetching road data...");
+          const res = await fetch("https://overpass-api.de/api/interpreter", {
+            method: "POST",
+            body: query,
+            headers: { "Content-Type": "text/plain" },
+          });
+
+          if (!res.ok) {
+            console.log("HTTP error:", res.status);
+            throw new Error(`HTTP ${res.status}`);
+          }
+
+          const data = await res.json();
+          console.log("Received data elements:", data.elements?.length || 0);
+
+          if (data.elements && data.elements.length > 0) {
+            buildRoadNetwork(data);
+            isNetworkLoaded = true;
+            console.log(
+              `Road network built: ${roadNetwork.nodes.size} nodes, ${roadNodesArray.length} node array`
+            );
+          } else {
+            console.log("No road data in response");
+            isNetworkLoaded = false;
+          }
+        } catch (err) {
+          console.error("Failed to load roads:", err);
+          isNetworkLoaded = false;
+        }
+
+        loading.style.display = "none";
+      }
+
+      function getBoundingBox(lat, lng, radiusKm) {
+        const deg = radiusKm / 111.32;
+        return {
+          north: lat + deg,
+          south: lat - deg,
+          east: lng + deg,
+          west: lng - deg,
+        };
+      }
+
+      function buildRoadNetwork(data) {
+        const nodes = new Map();
+        const ways = [];
+
+        data.elements.forEach((el) => {
+          if (el.type === "node" && el.lat && el.lon) {
+            nodes.set(el.id, { id: el.id, lat: el.lat, lng: el.lon });
+          } else if (el.type === "way" && el.nodes && el.nodes.length > 1) {
+            ways.push(el);
+          }
+        });
+
+        roadNetwork.nodes = nodes;
+        roadNetwork.edges = new Map();
+        roadNodesArray = Array.from(nodes.values());
+
+        ways.forEach((way) => {
+          for (let i = 0; i < way.nodes.length - 1; i++) {
+            const a = way.nodes[i],
+              b = way.nodes[i + 1];
+            if (nodes.has(a) && nodes.has(b)) {
+              const na = nodes.get(a),
+                nb = nodes.get(b);
+              const dist = calculateDistance(na.lat, na.lng, nb.lat, nb.lng);
+
+              if (dist > 0 && dist < 5000) {
+                if (!roadNetwork.edges.has(a)) roadNetwork.edges.set(a, []);
+                if (!roadNetwork.edges.has(b)) roadNetwork.edges.set(b, []);
+                roadNetwork.edges.get(a).push({ node: b, distance: dist });
+                roadNetwork.edges.get(b).push({ node: a, distance: dist });
+              }
+            }
+          }
+        });
+      }
+
+      function dijkstra(start, end) {
+        if (!roadNetwork.nodes.has(start) || !roadNetwork.nodes.has(end)) {
+          console.log("Start or end node not found in network");
+          return null;
+        }
+
+        const dist = new Map();
+        const prev = new Map();
+        const unvisited = new Set();
+
+        // Initialize only nodes that are reachable (have edges)
+        const reachableNodes = new Set();
+
+        // First, find all nodes connected to start node (BFS-like exploration)
+        const queue = [start];
+        const visited = new Set();
+        reachableNodes.add(start);
+
+        while (queue.length > 0 && reachableNodes.size < 5000) {
+          const current = queue.shift();
+          if (visited.has(current)) continue;
+          visited.add(current);
+
+          const edges = roadNetwork.edges.get(current) || [];
+          for (let edge of edges) {
+            if (!visited.has(edge.node)) {
+              reachableNodes.add(edge.node);
+              queue.push(edge.node);
+              if (edge.node === end) break; // Found target, good sign
+            }
+          }
+        }
+
+        // If end node not reachable, return null
+        if (!reachableNodes.has(end)) {
+          console.log("End node not reachable from start node");
+          return null;
+        }
+
+        // Initialize Dijkstra for reachable nodes only
+        for (let nodeId of reachableNodes) {
+          dist.set(nodeId, Infinity);
+          prev.set(nodeId, null);
+          unvisited.add(nodeId);
+        }
+
+        dist.set(start, 0);
+        let iterations = 0;
+        const maxIterations = Math.min(reachableNodes.size * 2, 3000);
+
+        while (unvisited.size > 0 && iterations < maxIterations) {
+          iterations++;
+
+          // Find unvisited node with minimum distance
+          let current = null;
+          let minDist = Infinity;
+
+          for (let nodeId of unvisited) {
+            const d = dist.get(nodeId);
+            if (d < minDist) {
+              minDist = d;
+              current = nodeId;
+            }
+          }
+
+          if (current === null || minDist === Infinity) break;
+          if (current === end) break; // Found shortest path to target
+
+          unvisited.delete(current);
+
+          // Check neighbors
+          const edges = roadNetwork.edges.get(current) || [];
+          for (let edge of edges) {
+            if (unvisited.has(edge.node)) {
+              const newDist = dist.get(current) + edge.distance;
+              if (newDist < dist.get(edge.node)) {
+                dist.set(edge.node, newDist);
+                prev.set(edge.node, current);
+              }
+            }
+          }
+        }
+
+        // Reconstruct path
+        const path = [];
+        let current = end;
+
+        while (current !== null && path.length < 500) {
+          path.unshift(current);
+          current = prev.get(current);
+        }
+
+        // Verify we have a valid path from start to end
+        if (
+          path.length > 1 &&
+          path[0] === start &&
+          path[path.length - 1] === end
+        ) {
+          console.log(
+            `Found path with ${path.length} nodes in ${iterations} iterations`
+          );
+          return path;
+        }
+
+        console.log("Failed to construct valid path");
+        return null;
+      }
+
+      function pathToCoordinates(path) {
+        return path
+          .map((id) => {
+            const n = roadNetwork.nodes.get(id);
+            return n ? [n.lat, n.lng] : null;
+          })
+          .filter((coord) => coord !== null);
+      }
+
+      function Traffic(lat, lng) {
+        console.log(
+          "Starting Traffic function with",
+          roadNodesArray.length,
+          "nodes"
+        );
+
+        if (!isNetworkLoaded || roadNodesArray.length < 10) {
+          console.log("Road network not ready, falling back to simple traffic");
+          return;
+        }
+
+        const vehicleCount = Math.floor(Math.random() * 6) + 5;
+
+        // Get nodes that are closer and more likely to be connected
+        const nearbyNodes = roadNodesArray.filter((n) => {
+          const dist = calculateDistance(lat, lng, n.lat, n.lng);
+          return dist <= 4000 && dist >= 200;
+        });
+
+        console.log("Found", nearbyNodes.length, "nearby nodes");
+
+        if (nearbyNodes.length < 20) {
+          console.log("Not enough nearby road nodes, using simple traffic");
+          return;
+        }
+
+        // Group nodes by proximity to increase chances of connectivity
+        const nodeGroups = [];
+        const groupSize = Math.min(500, Math.floor(nearbyNodes.length / 4));
+
+        for (let i = 0; i < nearbyNodes.length; i += groupSize) {
+          nodeGroups.push(nearbyNodes.slice(i, i + groupSize));
+        }
+
+        let successCount = 0;
+        let attempts = 0;
+        const maxAttempts = vehicleCount * 3; // Try harder to find valid paths
+
+        while (successCount < vehicleCount && attempts < maxAttempts) {
+          attempts++;
+
+          try {
+            // Choose nodes from the same group or nearby groups for better connectivity
+            const groupIndex = Math.floor(Math.random() * nodeGroups.length);
+            const startGroup = nodeGroups[groupIndex];
+            const endGroupIndex = Math.max(
+              0,
+              Math.min(
+                nodeGroups.length - 1,
+                groupIndex + Math.floor(Math.random() * 3) - 1
+              )
+            ); // Nearby group
+            const endGroup = nodeGroups[endGroupIndex];
+
+            const startNode =
+              startGroup[Math.floor(Math.random() * startGroup.length)];
+
+            // Try multiple end nodes to increase success rate
+            const endCandidates = endGroup.filter((n) => {
+              const d = calculateDistance(
+                startNode.lat,
+                startNode.lng,
+                n.lat,
+                n.lng
+              );
+              return d >= 500 && d <= 3000; // Closer distance for better connectivity
+            });
+
+            if (endCandidates.length === 0) continue;
+
+            // Try up to 3 different end nodes
+            let path = null;
+            for (
+              let i = 0;
+              i < Math.min(3, endCandidates.length) && !path;
+              i++
+            ) {
+              const endNode = endCandidates[i];
+              console.log(
+                `Attempt ${attempts}: Calculating path from ${
+                  startNode.id
+                } to ${endNode.id} (distance: ${Math.round(
+                  calculateDistance(
+                    startNode.lat,
+                    startNode.lng,
+                    endNode.lat,
+                    endNode.lng
+                  )
+                )}m)`
+              );
+              path = dijkstra(startNode.id, endNode.id);
+
+              if (path && path.length >= 2) {
+                const coords = pathToCoordinates(path);
+                if (coords.length >= 2) {
+                  const velocity = Math.floor(Math.random() * 61) + 20;
+
+                  const marker = L.marker([startNode.lat, startNode.lng], {
+                    icon: redIcon,
+                  }).addTo(map);
+                  const destMarker = L.marker([endNode.lat, endNode.lng], {
+                    icon: destinationIcon,
+                  }).addTo(map);
+                  destMarker.setOpacity(0);
+
+                  const vehicle = {
+                    marker,
+                    destMarker,
+                    velocity,
+                    lat: startNode.lat,
+                    lng: startNode.lng,
+                    startLat: startNode.lat,
+                    startLng: startNode.lng,
+                    destLat: endNode.lat,
+                    destLng: endNode.lng,
+                    routePath: coords,
+                    currentPathIndex: 0,
+                    nextWaypoint: coords.length > 1 ? coords[1] : coords[0],
+                    lastUpdate: Date.now(),
+                    pathLine: null,
+                    showingPath: false,
+                    completed: false,
+                    simple: false,
+                    goingToDestination: true,
+                    busInfo: generateBusInfo(),
+                  };
+
+                  marker.on("click", () => {
+                    showBusInfo(vehicle);
+                    togglePath(vehicle);
+                  });
+                  trafficVehicles.push(vehicle);
+                  successCount++;
+                  console.log(
+                    `✓ Created vehicle ${successCount} with path length ${coords.length}`
+                  );
+                  break;
+                }
+              }
+            }
+
+            if (!path) {
+              console.log("✗ No valid path found for this attempt");
+            }
+          } catch (error) {
+            console.error("Error creating vehicle:", error);
+          }
+        }
+
+        console.log(
+          `Successfully created ${successCount} vehicles after ${attempts} attempts`
+        );
+
+        if (trafficVehicles.length > 0) {
+          updateTraffic();
+        } else {
+          console.log("No vehicles created, falling back to simple traffic");
+        }
+      }
+
+      function togglePath(vehicle) {
+        if (!vehicle || vehicle.completed) return;
+
+        try {
+          if (vehicle.showingPath) {
+            if (vehicle.pathLine) {
+              map.removeLayer(vehicle.pathLine);
+              vehicle.pathLine = null;
+            }
+            vehicle.destMarker.setOpacity(0);
+            vehicle.showingPath = false;
+          } else {
+            vehicle.pathLine = L.polyline(vehicle.routePath, {
+              color: "blue",
+              weight: 3,
+              opacity: 0.7,
+            }).addTo(map);
+            vehicle.destMarker.setOpacity(1);
+            vehicle.showingPath = true;
+          }
+        } catch (error) {
+          console.error("Error toggling path:", error);
+        }
+      }
+
+      function updateVehiclePosition(v) {
+        if (!v || v.completed || !v.nextWaypoint) return;
+
+        try {
+          const now = Date.now();
+          const dt = (now - v.lastUpdate) / 1000;
+
+          if (v.goingToDestination) {
+            if (v.currentPathIndex >= v.routePath.length - 1) {
+              v.goingToDestination = false;
+              v.routePath = [...v.routePath].reverse();
+              v.currentPathIndex = 0;
+              v.nextWaypoint =
+                v.routePath.length > 1 ? v.routePath[1] : v.routePath[0];
+              v.busInfo.vacantSeats = Math.floor(Math.random() * 100) + 1;
+              return;
+            }
+          } else {
+            if (v.currentPathIndex >= v.routePath.length - 1) {
+              v.goingToDestination = true;
+              v.routePath = [...v.routePath].reverse();
+              v.currentPathIndex = 0;
+              v.nextWaypoint =
+                v.routePath.length > 1 ? v.routePath[1] : v.routePath[0];
+              v.busInfo.vacantSeats = Math.floor(Math.random() * 100) + 1;
+              return;
+            }
+          }
+
+          const distToNext = calculateDistance(
+            v.lat,
+            v.lng,
+            v.nextWaypoint[0],
+            v.nextWaypoint[1]
+          );
+
+          if (distToNext < 20) {
+            v.currentPathIndex++;
+            if (v.currentPathIndex < v.routePath.length) {
+              v.nextWaypoint = v.routePath[v.currentPathIndex];
+            }
+          }
+
+          if (v.nextWaypoint && v.nextWaypoint.length >= 2) {
+            const bearing = calculateBearing(
+              v.lat,
+              v.lng,
+              v.nextWaypoint[0],
+              v.nextWaypoint[1]
+            );
+            const velocityMs = v.velocity / 3.6;
+            const dist = Math.min(velocityMs * dt, distToNext * 0.9);
+            const deg = dist / 111320;
+
+            v.lat += Math.cos(bearing) * deg;
+            v.lng += Math.sin(bearing) * deg;
+            v.marker.setLatLng([v.lat, v.lng]);
+          }
+
+          v.lastUpdate = now;
+        } catch (error) {
+          console.error("Error updating vehicle:", error);
+          v.completed = true;
+        }
+      }
+
+      function updateTraffic() {
+        trafficVehicles.forEach(updateVehiclePosition);
+        setTimeout(updateTraffic, 1000);
+      }
+
+      function calculateDistance(lat1, lng1, lat2, lng2) {
+        if (!lat1 || !lng1 || !lat2 || !lng2) return 0;
+        const R = 6371000;
+        const dLat = ((lat2 - lat1) * Math.PI) / 180;
+        const dLng = ((lng2 - lng1) * Math.PI) / 180;
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos((lat1 * Math.PI) / 180) *
+            Math.cos((lat2 * Math.PI) / 180) *
+            Math.sin(dLng / 2) *
+            Math.sin(dLng / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+
+      function calculateBearing(lat1, lng1, lat2, lng2) {
+        if (!lat1 || !lng1 || !lat2 || !lng2) return 0;
+        const dLng = ((lng2 - lng1) * Math.PI) / 180;
+        const lat1R = (lat1 * Math.PI) / 180;
+        const lat2R = (lat2 * Math.PI) / 180;
+        const y = Math.sin(dLng) * Math.cos(lat2R);
+        const x =
+          Math.cos(lat1R) * Math.sin(lat2R) -
+          Math.sin(lat1R) * Math.cos(lat2R) * Math.cos(dLng);
+        return Math.atan2(y, x);
+      }
+
+      window.addEventListener("load", DisplayUserMap);
+
+      function generateBusInfo() {
+        return {
+          driverName:
+            indianNames[Math.floor(Math.random() * indianNames.length)],
+          ownerName:
+            indianNames[Math.floor(Math.random() * indianNames.length)],
+          vacantSeats: Math.floor(Math.random() * 100) + 1,
+          destination:
+            indianPlaces[Math.floor(Math.random() * indianPlaces.length)],
+          routeNumber: "RT-" + Math.floor(Math.random() * 999) + 1,
+        };
+      }
+
+      function showBusInfo(vehicle) {
+        const info = vehicle.busInfo;
+        document.getElementById("driverName").textContent = info.driverName;
+        document.getElementById("ownerName").textContent = info.ownerName;
+        document.getElementById("vacantSeats").textContent = info.vacantSeats;
+        document.getElementById("busSpeed").textContent = vehicle.velocity;
+        document.getElementById("destination").textContent = info.destination;
+        document.getElementById("routeInfo").textContent = info.routeNumber;
+        document.getElementById("busInfo").style.display = "block";
+      }
+
+      function closeBusInfo() {
+        document.getElementById("busInfo").style.display = "none";
+      }
+    </script>
+  </body>
+</html>
