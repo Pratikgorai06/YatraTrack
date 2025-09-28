@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Driver Dashboard - YatraTrack</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+    />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f8f9fa;
+      }
+      #map {
+        height: 55vh;
+        width: 100%;
+        border-radius: 10px;
+        margin-top: 15px;
+      }
+      .card {
+        border-radius: 12px;
+        box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      footer {
+        margin-top: 30px;
+        padding: 15px;
+        background: #fff;
+        border-top: 1px solid #ddd;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navbar -->
+    <header>
+      <nav
+        class="navbar fixed-top navbar-expand-lg navbar-light bg-light shadow-sm"
+      >
+        <div class="container-fluid">
+          <a class="navbar-brand fw-bold" href="/">YatraTrack</a>
+          <button
+            class="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbarNavAltMarkup"
+          >
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+            <div class="navbar-nav ms-auto">
+              <a class="nav-link active" href="/">Home</a>
+
+              <a class="nav-link" href="/auth">SignUp/Login</a>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <div class="container mt-4">
+      <!-- Map Section with Simulation -->
+      <h2>Live Bus Location</h2>
+      <%- include('map') %>
+      <h3>Driver Dashboard</h3>
+      <p class="text-muted">
+        Monitor your trips, earnings, and vehicle in real-time.
+      </p>
+
+      <!-- Summary Cards -->
+      <div class="row text-center mb-4">
+        <div class="col-md-4">
+          <div class="card p-3 bg-light">
+            <h5>Today's Trips</h5>
+            <h2>12</h2>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card p-3 bg-light">
+            <h5>Total Earnings</h5>
+            <h2>₹3,250</h2>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card p-3 bg-light">
+            <h5>Passengers Served</h5>
+            <h2>86</h2>
+          </div>
+        </div>
+      </div>
+
+      <!-- Driver's Bus Information -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title">My Bus Information</h5>
+          <p><strong>Driver:</strong> Amit Singh</p>
+          <p><strong>Owner:</strong> Geeta Kumari</p>
+          <p><strong>Vacant Seats:</strong> 36</p>
+          <p><strong>Current Speed:</strong> 40 km/h</p>
+          <p><strong>Route:</strong> RT-5201</p>
+          <p><strong>Heading To:</strong> Agra</p>
+        </div>
+      </div>
+
+      <!-- Assigned Trips Table -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Assigned Trips</h5>
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+              <thead class="table-dark">
+                <tr>
+                  <th>Trip ID</th>
+                  <th>Pickup</th>
+                  <th>Drop</th>
+                  <th>Passengers</th>
+                  <th>Fare</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% const assignedTrips = [ {id:'T101', pickup:'Delhi',
+                drop:'Agra', passengers:28, fare:'₹2500', status:'Completed'},
+                {id:'T102', pickup:'City Mall', drop:'Train Station',
+                passengers:15, fare:'₹1200', status:'Ongoing'}, {id:'T103',
+                pickup:'Hospital', drop:'University', passengers:20,
+                fare:'₹1800', status:'Scheduled'} ]; %> <%
+                assignedTrips.forEach(trip => { %>
+                <tr>
+                  <td><%= trip.id %></td>
+                  <td><%= trip.pickup %></td>
+                  <td><%= trip.drop %></td>
+                  <td><%= trip.passengers %></td>
+                  <td><%= trip.fare %></td>
+                  <td><%= trip.status %></td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="text-center">
+      &copy; 2025 YatraTrack. All rights reserved.
+    </footer>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

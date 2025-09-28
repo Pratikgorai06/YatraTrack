@@ -17,8 +17,8 @@
         font-family: Arial, sans-serif;
       }
       #map {
-        height: calc(100vh - 40px);
-        width: 100%;
+        height: 48vh;
+        width: 90%;
       }
       #loading {
         position: fixed;
@@ -86,6 +86,86 @@
         padding: 10px 0;
         border-top: 1px solid #dee2e6;
       }
+      #busInfo {
+        position: fixed;
+        top: 15%;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(12px);
+        border-radius: 16px;
+        padding: 20px;
+        max-width: 320px;
+        z-index: 1000;
+        display: none;
+        font-size: 14px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        animation: slideIn 0.4s ease-in-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateX(120%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      #busInfo h3 {
+        font-size: 18px;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 15px;
+        background: linear-gradient(90deg, #0d6efd, #6c63ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      #busInfo .info-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 5px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      }
+
+      #busInfo .info-item:last-child {
+        border-bottom: none;
+      }
+
+      #busInfo .info-item i {
+        color: #0d6efd;
+        margin-right: 10px;
+      }
+
+      #busInfo .info-label {
+        font-weight: 500;
+        color: #333;
+        flex: 1;
+      }
+
+      #busInfo .info-value {
+        font-weight: bold;
+        color: #111;
+      }
+
+      #busInfo .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 12px;
+        background: none;
+        border: none;
+        font-size: 22px;
+        cursor: pointer;
+        color: #555;
+        transition: 0.2s;
+      }
+      #busInfo .close-btn:hover {
+        color: #0d6efd;
+      }
     </style>
   </head>
   <header>
@@ -108,7 +188,6 @@
         <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
           <div class="navbar-nav ms-auto">
             <a class="nav-link active" href="/">Home</a>
-            <a class="nav-link" href="/simulated">Simulation</a>
             <a class="nav-link" href="/auth">SignUp/Login</a>
           </div>
         </div>
@@ -131,7 +210,7 @@
         <strong>Vacant Seats:</strong> <span id="vacantSeats"></span>
       </div>
       <div class="info-item">
-        <strong>Current Speed:</strong> <span id="busSpeed"></span> km/h
+        <strong>Current Speed: </strong> <span id="busSpeed"></span> km/h
       </div>
       <div class="info-item">
         <strong>Heading to:</strong> <span id="destination"></span>
@@ -142,7 +221,7 @@
     </div>
 
     <div id="map"></div>
-    <footer>&copy; 2025 YatraTrack. All rights reserved.</footer>
+    <!-- <footer>&copy; 2025 YatraTrack. All rights reserved.</footer> -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
       let map;
@@ -225,7 +304,7 @@
         map = L.map("map").setView([userLat, userLng], 12);
 
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: "&copy; OpenStreetMap contributors",
+          attribution: "&copy; Code Blooded",
         }).addTo(map);
 
         if (navigator.geolocation) {

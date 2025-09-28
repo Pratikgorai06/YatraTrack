@@ -40,16 +40,41 @@ app.get("/auth", (req, res) => {
   res.render("auth");
 });
 
-app.post("/login", (req, res) => {
-  const { email, password } = req.body;
-  console.log("Login attempt:", email, password);
-  res.redirect("/");
+// Dashboards
+app.get("/driver-dashboard", (req, res) => {
+  res.render("driver-dashboard"); // create views/driver-dashboard.ejs
 });
 
+app.get("/passenger-dashboard", (req, res) => {
+  res.render("passenger-dashboard"); // create views/passenger-dashboard.ejs
+});
+
+// Login route
+app.post("/login", (req, res) => {
+  const { email, password, role } = req.body;
+  console.log("Login attempt:", email, password, role);
+
+  if (role === "driver") {
+    res.redirect("/driver-dashboard");
+  } else if (role === "passenger") {
+    res.redirect("/passenger-dashboard");
+  } else {
+    res.redirect("/auth");
+  }
+});
+
+// Signup route
 app.post("/signup", (req, res) => {
-  const { name, email, password } = req.body;
-  console.log("Signup attempt:", name, email, password);
-  res.redirect("/");
+  const { name, email, password, role } = req.body;
+  console.log("Signup attempt:", name, email, password, role);
+
+  if (role === "driver") {
+    res.redirect("/driver-dashboard");
+  } else if (role === "passenger") {
+    res.redirect("/passenger-dashboard");
+  } else {
+    res.redirect("/auth");
+  }
 });
 
 app.get("/simulated", (req, res) => {
