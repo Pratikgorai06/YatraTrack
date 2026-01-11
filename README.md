@@ -4,6 +4,9 @@ Real-Time Public Transport Tracking for Small Cities
 
 YatraTrack is a web-based platform that enables real-time tracking of public transport vehicles in smaller cities. It helps commuters see live positions of buses or minibuses, plan journeys better, and improve overall transit experience.
 
+🌐 Live Demo
+Try the app here: https://yatratrack.onrender.com/
+
 🚀 Features
 📍 Live Location Tracking — View the real-time location of vehicles on a map.
 🗺️ Route Visualization — See current routes taken by public transport.
@@ -21,22 +24,3 @@ Client JavaScript	JavaScript
 Server	Node.js / Express (assumed)
 Styles	CSS
 Data	Real-time transport positioning API
-
-Note: Specific backend dependencies and tools are defined in package.json.
-
-📦 Installation
-Clone the repo
-
-git clone https://github.com/Pratikgorai06/YatraTrack.git
-cd YatraTrack
-
-Install dependencies
-npm install
-
-Run the application
-npm start
-
-Open in browser
-http://localhost:3000
-
-Adjust commands based on your Node version and config as needed.
